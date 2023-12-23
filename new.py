@@ -1,0 +1,58 @@
+import numpy as np
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import sigmoid_kernel
+import pickle
+
+# Read the dataset
+df1 = pd.read_csv('Job.csv', error_bad_lines=False, engine='python')
+
+# Drop rows with missing values
+df1 = df1.dropna()
+
+
+df1['salary'] = df1['Salary'].astype(str)
+df1['education'] = df1['Education'].astype(str)
+df1['experience'] = df1['EXP'].astype(str)
+
+# Combine relevant columns into a new column 'jobinfo'
+df1['jobinfo'] = df1['jobdescription'] + ' ' + df1['salary'] + ' ' + df1['education'] + ' ' + df1['experience'] 
+
+# Create TF-IDF matrix
+tfid = TfidfVectorizer(stop_words='english')
+tfid_matrix = tfid.fit_transform(df1['jobinfo'])
+
+# Calculate sigmoid kernel
+cosine_sim = sigmoid_kernel(tfid_matrix, tfid_matrix)
+
+# Create indices series
+indices = pd.Series(df1.index, index=df1['jobtitle']).drop_duplicates()
+
+# Function to get recommendations with filters
+def get_recommendation(title, salary, education, experience, cosine_sim=cosine_sim):
+    # Get index of the given job title
+    idx = indices[title]
+
+    # Get the cosine similarity scores
+    sim_scores = list(enumerate(cosine_sim[idx]))
+
+    # Sort the jobs based on similarity scores
+    sim_scores = sorted(sim_scores, key=lambda x: x[1], reverse=True)
+
+    # Get the indices of the top 15 similar jobs
+    sim_scores = sim_scores[0:16]
+    tech_indices = [i[0] for i in sim_scores]
+
+    # Apply additional filters
+    filtered_jobs = df1.iloc[tech_indices]
+    filtered_jobs = filtered_jobs[(filtered_jobs['salary'] == salary) & 
+                                  (filtered_jobs['education'] == education) & 
+                                  (filtered_jobs['experience'] == experience)]
+
+    # Return the recommended job titles
+    return filtered_jobs['jobtitle']
+
+# Save the modified DataFrame and cosine similarity matrix
+new1 = df1[['jobtitle', 'jobdescription','salary','education','experience']]
+new1.to_csv('new2.csv')
+pickle.dump(new1, open('job_list2.pkl', 'wb'))

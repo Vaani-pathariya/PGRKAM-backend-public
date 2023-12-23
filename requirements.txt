@@ -1,0 +1,14 @@
+Flask
+Gunicorn
+flask_cors
+numpy
+pandas
+matplotlib
+seaborn
+Pyrebase4
+openai==0.27.8
+python-dotenv==1.0.0
+assemblyai
+pypdf
+scikit-learn
+dask
